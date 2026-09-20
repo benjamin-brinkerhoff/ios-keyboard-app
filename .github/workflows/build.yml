@@ -1,26 +1,60 @@
-name: Build & Validate
+name: Build & Package Unsigned IPA
 
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  validate-syntax:
+  build-unsigned-ipa:
+    name: Build Unsigned IPA
     runs-on: macos-14
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Select Xcode
+      - name: Select Xcode 15.4
         run: sudo xcode-select -switch /Applications/Xcode_15.4.app
 
-      - name: Validate Swift Files
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode Project
+        run: xcodegen generate
+
+      - name: Build Application and Extension (Unsigned)
         run: |
-          echo "Verifying Swift files..."
-          for file in $(find . -name "*.swift"); do
-            echo "Checking $file"
-            swiftc -parse "$file" || exit 1
-          done
-          echo "All Swift files parsed successfully!"
+          xcodebuild \
+            -project KeyboardApp.xcodeproj \
+            -scheme KeyboardApp \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath derivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Package Payload into Unsigned IPA
+        run: |
+          mkdir -p build/Payload
+          APP_PATH=$(find derivedData/Build/Products/Release-iphoneos -name "KeyboardApp.app" -type d | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "Error: KeyboardApp.app not found in build products!"
+            exit 1
+          fi
+          echo "Found built application at: $APP_PATH"
+          cp -r "$APP_PATH" build/Payload/
+          cd build
+          zip -r -y KeyboardApp-unsigned.ipa Payload
+          echo "Successfully packaged KeyboardApp-unsigned.ipa:"
+          ls -lh KeyboardApp-unsigned.ipa
+
+      - name: Upload Unsigned IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: KeyboardApp-unsigned-ipa
+          path: build/KeyboardApp-unsigned.ipa
+          retention-days: 14

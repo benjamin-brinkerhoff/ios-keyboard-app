@@ -8,20 +8,6 @@
 import UIKit
 import Combine
 
-struct ClipboardItem: Identifiable, Codable, Equatable {
-    let id: UUID
-    let text: String
-    let timestamp: Date
-    var isPinned: Bool
-
-    init(id: UUID = UUID(), text: String, timestamp: Date = Date(), isPinned: Bool = false) {
-        self.id = id
-        self.text = text
-        self.timestamp = timestamp
-        self.isPinned = isPinned
-    }
-}
-
 class ClipboardManager: ObservableObject {
     @Published var history: [ClipboardItem] = []
     @Published var hasFullAccess: Bool = false
@@ -40,11 +26,9 @@ class ClipboardManager: ObservableObject {
     }
 
     func checkFullAccess() {
-        // Checking if UIPasteboard is accessible indicates Full Access status in iOS keyboard extension
         if UIPasteboard.general.hasStrings {
             hasFullAccess = true
         } else {
-            // Test if we can query general pasteboard
             let test = UIPasteboard.general.string
             hasFullAccess = (test != nil || UIPasteboard.general.hasImages == false)
         }
@@ -55,7 +39,6 @@ class ClipboardManager: ObservableObject {
            let items = try? JSONDecoder().decode([ClipboardItem].self, from: data) {
             self.history = items
         } else {
-            // Seed starter snippets
             self.history = [
                 ClipboardItem(text: "Hello! Hope you're having a great day.", isPinned: true),
                 ClipboardItem(text: "Thanks for reaching out!", isPinned: true),
@@ -77,16 +60,13 @@ class ClipboardManager: ObservableObject {
             return
         }
 
-        // Avoid exact duplicate at the top
         if let first = history.first, first.text == currentString {
             return
         }
 
-        // Insert new item
         let newItem = ClipboardItem(text: currentString)
         history.insert(newItem, at: 0)
 
-        // Prune older unpinned items if exceeding max
         if history.count > maxHistoryItems {
             let pinned = history.filter { $0.isPinned }
             let unpinned = history.filter { !$0.isPinned }

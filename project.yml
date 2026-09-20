@@ -1,0 +1,51 @@
+name: KeyboardApp
+options:
+  bundleIdPrefix: com.ioskeyboard
+  deploymentTarget:
+    iOS: "16.0"
+  xcodeVersion: "15.4"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+    CODE_SIGNING_ALLOWED: NO
+    CODE_SIGNING_REQUIRED: NO
+    CODE_SIGN_IDENTITY: ""
+
+targets:
+  KeyboardApp:
+    type: application
+    platform: iOS
+    sources:
+      - path: KeyboardApp
+      - path: Shared
+    info:
+      path: KeyboardApp/Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ioskeyboard.app
+        CURRENT_PROJECT_VERSION: 1
+        MARKETING_VERSION: 1.0
+        GENERATE_INFOPLIST_FILE: NO
+        ENABLE_BITCODE: NO
+    dependencies:
+      - target: KeyboardExtension
+
+  KeyboardExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: KeyboardExtension
+      - path: Shared
+    info:
+      path: KeyboardExtension/Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ioskeyboard.app.keyboard
+        CURRENT_PROJECT_VERSION: 1
+        MARKETING_VERSION: 1.0
+        GENERATE_INFOPLIST_FILE: NO
+        ENABLE_BITCODE: NO
+        SKIP_INSTALL: NO
