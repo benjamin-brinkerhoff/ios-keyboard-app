@@ -1,0 +1,26 @@
+name: Build & Validate
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate-syntax:
+    runs-on: macos-14
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -switch /Applications/Xcode_15.4.app
+
+      - name: Validate Swift Files
+        run: |
+          echo "Verifying Swift files..."
+          for file in $(find . -name "*.swift"); do
+            echo "Checking $file"
+            swiftc -parse "$file" || exit 1
+          done
+          echo "All Swift files parsed successfully!"
