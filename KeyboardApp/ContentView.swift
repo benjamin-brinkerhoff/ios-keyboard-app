@@ -2,17 +2,20 @@
 //  ContentView.swift
 //  KeyboardApp
 //
-//  Dashboard providing setup instructions, test input field, and clipboard manager.
+//  Gboard-style Settings, Feature Dashboard, and Testing Playground.
 //
 
 import SwiftUI
 
 struct ContentView: View {
     @State private var testInput: String = ""
-    @State private var isKeyboardEnabled: Bool = false
-    @State private var hasFullAccess: Bool = false
+    @AppStorage("showNumberRow") private var showNumberRow: Bool = true
+    @AppStorage("showKeyBorders") private var showKeyBorders: Bool = true
+    @AppStorage("hapticsEnabled") private var hapticsEnabled: Bool = true
+    @AppStorage("soundEnabled") private var soundEnabled: Bool = true
+    @AppStorage("selectedTheme") private var selectedTheme: String = "System Auto"
 
-    // App Group clipboard items shared with extension
+    // App Group clipboard items
     @State private var savedSnippets: [String] = [
         "Hello! Hope you're having a great day.",
         "Thanks for reaching out!",
@@ -23,12 +26,12 @@ struct ContentView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("Interactive Test Ground")) {
-                    Text("Tap the text field below to test your custom keyboard:")
+                Section(header: Text("Interactive Playground")) {
+                    Text("Tap to test your Gboard-style keyboard with suggestions, text editing, and symbol popups:")
                         .font(.footnote)
                         .foregroundColor(.secondary)
 
-                    TextField("Type here to test keyboard...", text: $testInput)
+                    TextField("Type here to test...", text: $testInput)
                         .padding(8)
                         .background(Color(UIColor.secondarySystemBackground))
                         .cornerRadius(8)
@@ -42,57 +45,88 @@ struct ContentView: View {
                     }
                 }
 
-                Section(header: Text("Features Overview")) {
-                    HStack {
-                        Image(systemName: "hand.tap.fill")
-                            .foregroundColor(.blue)
-                            .frame(width: 24)
-                        VStack(alignment: .leading) {
-                            Text("Hold for Symbols & Accents")
-                                .font(.headline)
-                            Text("Press and hold any letter to reveal numbers, punctuation, and accented characters. Drag to select.")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    .padding(.vertical, 4)
+                Section(header: Text("Gboard Preferences")) {
+                    Toggle("Dedicated Number Row", isOn: $showNumberRow)
+                    Toggle("Key Borders", isOn: $showKeyBorders)
+                    Toggle("Haptic Feedback on Keypress", isOn: $hapticsEnabled)
+                    Toggle("Key Audio Clicks", isOn: $soundEnabled)
 
-                    HStack {
-                        Image(systemName: "doc.on.clipboard.fill")
-                            .foregroundColor(.green)
-                            .frame(width: 24)
-                        VStack(alignment: .leading) {
-                            Text("Built-in Clipboard & Snippets")
-                                .font(.headline)
-                            Text("Instant access to recent clips, saved snippets, and one-tap paste directly above the keys.")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
+                    Picker("Default Theme", selection: $selectedTheme) {
+                        Text("System Auto").tag("System Auto")
+                        Text("Dark (AMOLED)").tag("Dark (AMOLED)")
+                        Text("Light").tag("Light")
+                        Text("Dynamic Teal").tag("Dynamic Teal")
+                        Text("Desert Sand").tag("Desert Sand")
+                        Text("Forest Mint").tag("Forest Mint")
+                        Text("Midnight Lilac").tag("Midnight Lilac")
                     }
-                    .padding(.vertical, 4)
+                }
 
-                    HStack {
-                        Image(systemName: "waveform")
-                            .foregroundColor(.orange)
-                            .frame(width: 24)
-                        VStack(alignment: .leading) {
-                            Text("Haptics & Audio")
-                                .font(.headline)
-                            Text("Responsive native tactile feedback and system key clicks on touch.")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    .padding(.vertical, 4)
+                Section(header: Text("Gboard Feature Suite Included")) {
+                    FeatureRow(
+                        icon: "character.textbox",
+                        color: .blue,
+                        title: "Predictions & Auto-Correction",
+                        desc: "Trie-based prefix completions, next-word bigram suggestions, and top prediction strip."
+                    )
+
+                    FeatureRow(
+                        icon: "arrow.up.and.down.and.arrow.left.and.right",
+                        color: .purple,
+                        title: "Text Editing Navigation Pad",
+                        desc: "Full directional D-pad, text selection mode, Select All, Cut, Copy, Paste, and Jump to Start/End."
+                    )
+
+                    FeatureRow(
+                        icon: "cursorarrow.motionlines",
+                        color: .teal,
+                        title: "Spacebar Cursor Scrubbing",
+                        desc: "Slide your finger horizontally across the spacebar to glide the cursor precisely."
+                    )
+
+                    FeatureRow(
+                        icon: "delete.backward.fill",
+                        color: .red,
+                        title: "Backspace Slide-to-Delete",
+                        desc: "Swipe left from the backspace key to quickly delete multiple words."
+                    )
+
+                    FeatureRow(
+                        icon: "hand.point.up.left.fill",
+                        color: .orange,
+                        title: "One-Handed Mode",
+                        desc: "Dock the keyboard to the left or right with quick resize and switch side buttons."
+                    )
+
+                    FeatureRow(
+                        icon: "face.smiling.fill",
+                        color: .yellow,
+                        title: "Categorized Emoji Picker",
+                        desc: "9 categorized emoji sections with quick category switcher strip."
+                    )
+
+                    FeatureRow(
+                        icon: "paintpalette.fill",
+                        color: .pink,
+                        title: "Material You Themes & Borders",
+                        desc: "7 custom themes with AMOLED Dark, Dynamic Teal, and toggleable key borders."
+                    )
+
+                    FeatureRow(
+                        icon: "doc.on.clipboard.fill",
+                        color: .green,
+                        title: "Clipboard Manager",
+                        desc: "History tracking, quick-paste chips, pinned snippets, and expandable clipboard drawer."
+                    )
                 }
 
                 Section(header: Text("Setup Instructions")) {
-                    StepRow(number: "1", title: "Open iOS Settings", desc: "Go to Settings > General > Keyboard > Keyboards")
-                    StepRow(number: "2", title: "Add New Keyboard", desc: "Tap 'Add New Keyboard...' and select 'Custom Keyboard'")
-                    StepRow(number: "3", title: "Enable Full Access", desc: "Tap 'Custom Keyboard' and turn on 'Allow Full Access' (required for clipboard read/paste)")
+                    StepRow(number: "1", title: "Open Settings", desc: "Settings > General > Keyboard > Keyboards")
+                    StepRow(number: "2", title: "Add Custom Keyboard", desc: "Tap 'Add New Keyboard...' and choose 'Custom Keyboard'")
+                    StepRow(number: "3", title: "Allow Full Access", desc: "Turn ON 'Allow Full Access' to enable clipboard access and theme syncing")
                 }
 
-                Section(header: Text("Clipboard Quick Snippets")) {
+                Section(header: Text("Saved Clipboard Snippets")) {
                     HStack {
                         TextField("Add new snippet...", text: $newSnippetText)
                         Button(action: addSnippet) {
@@ -109,7 +143,7 @@ struct ContentView: View {
                     .onDelete(perform: deleteSnippet)
                 }
             }
-            .navigationTitle("iOS Keyboard App")
+            .navigationTitle("Gboard for iOS")
         }
     }
 
@@ -125,18 +159,18 @@ struct ContentView: View {
     }
 }
 
-struct StepRow: View {
-    let number: String
+struct FeatureRow: View {
+    let icon: String
+    let color: Color
     let title: String
     let desc: String
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            Text(number)
-                .font(.system(size: 14, weight: .bold))
-                .foregroundColor(.white)
-                .frame(width: 24, height: 24)
-                .background(Circle().fill(Color.accentColor))
+            Image(systemName: icon)
+                .font(.system(size: 20))
+                .foregroundColor(color)
+                .frame(width: 28, height: 28)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
@@ -147,6 +181,6 @@ struct StepRow: View {
                     .foregroundColor(.secondary)
             }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 3)
     }
 }

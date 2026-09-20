@@ -2,18 +2,30 @@
 //  KeyboardViewModel.swift
 //  KeyboardExtension
 //
-//  State coordinator for keyboard extension, gestures, layouts, and system bridge.
+//  State coordinator for Gboard-style features: Predictions, Text Editing, Themes,
+//  One-Handed mode, Spacebar trackpad, and Symbol popups.
 //
 
 import SwiftUI
 import Combine
 
 class KeyboardViewModel: ObservableObject {
-    // Current layout and state
+    // Current layout and layer
     @Published var currentLayer: KeyboardLayer = .letters
     @Published var shiftState: ShiftState = .off
     @Published var needsInputModeSwitchKey: Bool = false
-    @Published var isClipboardDrawerOpen: Bool = false
+
+    // Gboard Tools and Drawers
+    @Published var activeTool: GboardTool = .none
+    @Published var showNumberRow: Bool = true
+    @Published var oneHandedState: OneHandedState = .none
+    @Published var currentTheme: GboardTheme = .system
+    @Published var showKeyBorders: Bool = true
+
+    // Predictive text & Suggestions
+    @Published var currentPredictions: [String] = ["I", "The", "Thanks"]
+    @Published var currentWordPrefix: String = ""
+    let predictionEngine = PredictionEngine()
 
     // Context from textDocumentProxy
     @Published var contextBefore: String?
@@ -23,6 +35,10 @@ class KeyboardViewModel: ObservableObject {
     @Published var activePopupKey: KeyItem?
     @Published var selectedAlternateIndex: Int?
     @Published var popupGlobalFrame: CGRect = .zero
+
+    // Spacebar cursor scrub tracking
+    @Published var isSpacebarDragging: Bool = false
+    private var lastDragStep: CGFloat = 0
 
     // User preferences
     @Published var soundEnabled: Bool = true
@@ -65,12 +81,84 @@ class KeyboardViewModel: ObservableObject {
         self.contextBefore = before
         self.contextAfter = after
 
-        // Auto-capitalize after period followed by space
-        if currentLayer == .letters && shiftState == .off {
-            if let before = before, before.hasSuffix(". ") || before.hasSuffix("! ") || before.hasSuffix("? ") || before.isEmpty {
-                shiftState = .shifted
+        // Extract active word under cursor for predictive completions
+        if let before = before {
+            let tokens = before.components(separatedBy: CharacterSet.whitespacesAndNewlines.union(.punctuationCharacters))
+            let currentWord = tokens.last ?? ""
+            self.currentWordPrefix = currentWord
+
+            // Find preceding word for bigram next-word prediction
+            let nonEmptyTokens = tokens.filter { !$0.isEmpty }
+            let prevWord = nonEmptyTokens.count >= 2 ? nonEmptyTokens[nonEmptyTokens.count - 2] : nil
+
+            let predictions = predictionEngine.getPredictions(for: currentWord, previousWord: prevWord)
+            self.currentPredictions = predictions
+
+            // Auto-capitalize after sentence endings
+            if currentLayer == .letters && shiftState == .off {
+                if before.hasSuffix(". ") || before.hasSuffix("! ") || before.hasSuffix("? ") || before.isEmpty {
+                    shiftState = .shifted
+                }
             }
+        } else {
+            self.currentWordPrefix = ""
+            self.currentPredictions = ["I", "The", "Thanks"]
         }
+    }
+
+    // MARK: - Prediction Application
+
+    func applyPrediction(_ word: String) {
+        triggerHaptic(style: .light)
+
+        // Delete currently typed partial prefix
+        let charactersToDelete = currentWordPrefix.count
+        for _ in 0..<charactersToDelete {
+            onDeleteBackward?()
+        }
+
+        // Insert full predicted word + trailing space
+        let textToInsert = word + " "
+        onInsertText?(textToInsert)
+
+        currentWordPrefix = ""
+    }
+
+    // MARK: - Spacebar Cursor Scrubbing (Trackpad Mode)
+
+    func handleSpacebarDragChange(translation: CGFloat) {
+        let stepThreshold: CGFloat = 11.0
+        let delta = translation - lastDragStep
+
+        if abs(delta) >= stepThreshold {
+            let characters = Int(delta / stepThreshold)
+            onRequestAdjustPosition?(characters)
+            lastDragStep += CGFloat(characters) * stepThreshold
+            triggerSelectionFeedback()
+        }
+    }
+
+    func handleSpacebarDragEnd() {
+        lastDragStep = 0
+        isSpacebarDragging = false
+    }
+
+    // MARK: - Backspace Slide-to-Delete
+
+    func handleBackspaceSlide(translation: CGFloat) {
+        // Sliding left on backspace deletes multiple words (Gboard feature)
+        if translation < -30 {
+            // Delete word
+            onDeleteBackward?()
+            triggerHaptic(style: .medium)
+        }
+    }
+
+    // MARK: - Cursor Movement
+
+    func moveCursor(by offset: Int) {
+        onRequestAdjustPosition?(offset)
+        triggerSelectionFeedback()
     }
 
     // MARK: - Key Actions
@@ -118,7 +206,12 @@ class KeyboardViewModel: ObservableObject {
 
         case .clipboardToggle:
             withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                isClipboardDrawerOpen.toggle()
+                activeTool = (activeTool == .clipboard) ? .none : .clipboard
+            }
+
+        case .emoji:
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                activeTool = (activeTool == .emoji) ? .none : .emoji
             }
         }
     }
@@ -130,7 +223,6 @@ class KeyboardViewModel: ObservableObject {
         triggerHaptic(style: .medium)
         self.activePopupKey = key
         self.popupGlobalFrame = frame
-        // Default to first alternate or middle
         self.selectedAlternateIndex = 0
     }
 
@@ -140,7 +232,6 @@ class KeyboardViewModel: ObservableObject {
         let itemWidth: CGFloat = 36.0
         let totalPopupWidth = CGFloat(count) * itemWidth
 
-        // Map offset relative to popup start
         let relativeX = offset + (totalPopupWidth / 2.0)
         let index = Int(relativeX / itemWidth)
         let clampedIndex = max(0, min(count - 1, index))
@@ -158,7 +249,6 @@ class KeyboardViewModel: ObservableObject {
             triggerHaptic(style: .light)
         }
 
-        // Reset popup state
         self.activePopupKey = nil
         self.selectedAlternateIndex = nil
         self.popupGlobalFrame = .zero

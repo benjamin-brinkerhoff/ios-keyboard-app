@@ -2,7 +2,8 @@
 //  KeyboardView.swift
 //  KeyboardExtension
 //
-//  Root SwiftUI container organizing the clipboard bar, key rows, bottom controls, and popup overlay.
+//  Main Gboard-style Keyboard UI container integrating Toolbar, One-Handed Mode,
+//  Dedicated Number Row, Tool Drawers, and Symbol Popups.
 //
 
 import SwiftUI
@@ -12,31 +13,70 @@ struct KeyboardView: View {
 
     var body: some View {
         ZStack {
-            Color(UIColor.systemGray4)
+            // Keyboard Background
+            viewModel.currentTheme.backgroundColor
                 .edgesIgnoringSafeArea(.all)
 
-            VStack(spacing: 7) {
-                // Top Clipboard Toolbar Bar
-                ClipboardBarView(viewModel: viewModel, clipboardManager: viewModel.clipboardManager)
+            VStack(spacing: 0) {
+                // Gboard Top Action & Prediction Toolbar
+                ToolbarView(viewModel: viewModel)
 
-                // Key Rows
-                ForEach(currentRows) { row in
-                    HStack(spacing: 5) {
-                        ForEach(row.keys) { key in
-                            KeyButtonView(viewModel: viewModel, key: key)
-                                .frame(maxWidth: keyWidth(for: key))
+                Divider()
+                    .background(Color.black.opacity(0.1))
+
+                // Active Tool Drawer Overlay (Clipboard, Text Edit, Emoji, Themes)
+                if viewModel.activeTool != .none {
+                    toolDrawer
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                } else {
+                    // Main Keyboard Layout with One-Handed Mode Support
+                    HStack(spacing: 0) {
+                        // Left Rail for One-Handed Mode (docked to Right)
+                        if viewModel.oneHandedState == .right {
+                            OneHandedRailView(viewModel: viewModel, isLeftSide: true)
+                        }
+
+                        // Main Key Rows Column
+                        VStack(spacing: 6) {
+                            // Dedicated Number Row (Toggleable, just like in Gboard)
+                            if viewModel.showNumberRow && viewModel.currentLayer == .letters {
+                                HStack(spacing: 4) {
+                                    ForEach(KeyboardLayout.dedicatedNumberRow().keys) { key in
+                                        KeyButtonView(viewModel: viewModel, key: key)
+                                    }
+                                }
+                                .padding(.horizontal, 3)
+                                .padding(.top, 2)
+                            }
+
+                            // Layer Rows
+                            ForEach(currentRows) { row in
+                                HStack(spacing: 4) {
+                                    ForEach(row.keys) { key in
+                                        KeyButtonView(viewModel: viewModel, key: key)
+                                            .frame(maxWidth: keyWidth(for: key))
+                                    }
+                                }
+                                .padding(.horizontal, 3)
+                            }
+
+                            // Bottom Controls Row
+                            bottomControlsRow
+                                .padding(.horizontal, 3)
+                                .padding(.bottom, 3)
+                        }
+                        .frame(maxWidth: .infinity)
+
+                        // Right Rail for One-Handed Mode (docked to Left)
+                        if viewModel.oneHandedState == .left {
+                            OneHandedRailView(viewModel: viewModel, isLeftSide: false)
                         }
                     }
-                    .padding(.horizontal, 4)
+                    .padding(.top, 4)
                 }
-
-                // Bottom Functional Controls Row (123 / ABC, Globe, Spacebar, Return)
-                bottomControlsRow
-                    .padding(.horizontal, 4)
-                    .padding(.bottom, 4)
             }
 
-            // Top-layer Popup callout for long-press alternate symbols
+            // Long-press alternate symbols floating popup
             if let activeKey = viewModel.activePopupKey {
                 KeyPopupView(
                     key: activeKey,
@@ -45,7 +85,23 @@ struct KeyboardView: View {
                 )
             }
         }
-        .frame(height: 275)
+        .frame(height: 290)
+    }
+
+    @ViewBuilder
+    private var toolDrawer: some View {
+        switch viewModel.activeTool {
+        case .clipboard:
+            ClipboardBarView(viewModel: viewModel, clipboardManager: viewModel.clipboardManager)
+        case .textEditing:
+            TextEditingPadView(viewModel: viewModel)
+        case .emoji:
+            EmojiKeyboardView(viewModel: viewModel)
+        case .themes:
+            ThemePickerView(viewModel: viewModel)
+        case .none:
+            EmptyView()
+        }
     }
 
     private var currentRows: [KeyboardRow] {
@@ -63,25 +119,36 @@ struct KeyboardView: View {
         if key.widthRatio == 1.0 {
             return .infinity
         }
-        // Specific width modifiers
-        return 44.0 * key.widthRatio
+        return 42.0 * key.widthRatio
     }
 
     private var bottomControlsRow: some View {
-        HStack(spacing: 5) {
-            // Layer switch button (123 or ABC)
+        HStack(spacing: 4) {
+            // Layer switcher: ?123 or ABC
             KeyButtonView(
                 viewModel: viewModel,
                 key: KeyItem(
                     id: "layer_switch",
-                    label: viewModel.currentLayer == .letters ? "123" : "ABC",
+                    label: viewModel.currentLayer == .letters ? "?123" : "ABC",
                     action: .switchLayer(viewModel.currentLayer == .letters ? .numbers : .letters),
-                    widthRatio: 1.4,
+                    widthRatio: 1.3,
                     keyType: .modifier
                 )
             )
 
-            // Globe / next keyboard button (only if multiple keyboards enabled)
+            // Emoji / Symbol key
+            KeyButtonView(
+                viewModel: viewModel,
+                key: KeyItem(
+                    id: "emoji_btn",
+                    label: "face.smiling",
+                    action: .emoji,
+                    widthRatio: 1.0,
+                    keyType: .modifier
+                )
+            )
+
+            // Globe key if multiple keyboards enabled
             if viewModel.needsInputModeSwitchKey {
                 KeyButtonView(
                     viewModel: viewModel,
@@ -89,19 +156,31 @@ struct KeyboardView: View {
                         id: "globe",
                         label: "globe",
                         action: .globe,
-                        widthRatio: 1.1,
+                        widthRatio: 1.0,
                         keyType: .modifier
                     )
                 )
             }
 
-            // Spacebar
+            // Spacebar with Gboard cursor trackpad
             KeyButtonView(
                 viewModel: viewModel,
                 key: KeyItem(
                     id: "space",
                     label: "space",
                     action: .space,
+                    keyType: .standard
+                )
+            )
+
+            // Period key with quick alternate symbols
+            KeyButtonView(
+                viewModel: viewModel,
+                key: KeyItem(
+                    label: ".",
+                    action: .character("."),
+                    alternates: [",", "?", "!", ":", ";", "-"],
+                    widthRatio: 1.0,
                     keyType: .standard
                 )
             )
@@ -113,7 +192,7 @@ struct KeyboardView: View {
                     id: "return",
                     label: "return",
                     action: .returnKey,
-                    widthRatio: 1.7,
+                    widthRatio: 1.5,
                     keyType: .action
                 )
             )

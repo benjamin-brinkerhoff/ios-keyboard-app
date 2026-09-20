@@ -2,7 +2,8 @@
 //  KeyButtonView.swift
 //  KeyboardExtension
 //
-//  Interactive key view supporting tap, long press popup, drag selection, and styling.
+//  Interactive key view with theme styling, key borders, tap, long press popup,
+//  and spacebar cursor trackpad gesture support.
 //
 
 import SwiftUI
@@ -15,18 +16,30 @@ struct KeyButtonView: View {
     @State private var longPressWorkItem: DispatchWorkItem?
     @State private var globalFrame: CGRect = .zero
 
-    private let keyCornerRadius: CGFloat = 8.0
-    private let keyHeight: CGFloat = 46.0
+    private let keyCornerRadius: CGFloat = 7.0
+    private let keyHeight: CGFloat = 43.0
 
     var body: some View {
         GeometryReader { proxy in
             let frame = proxy.frame(in: .global)
 
             ZStack {
-                // Key background
+                // Key Background with Key Borders toggle support
                 RoundedRectangle(cornerRadius: keyCornerRadius)
                     .fill(backgroundColor)
-                    .shadow(color: Color.black.opacity(0.18), radius: 0, x: 0, y: isPressed ? 0.5 : 1.2)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: keyCornerRadius)
+                            .stroke(
+                                viewModel.showKeyBorders ? Color.black.opacity(0.12) : Color.clear,
+                                lineWidth: viewModel.showKeyBorders ? 1.0 : 0
+                            )
+                    )
+                    .shadow(
+                        color: viewModel.showKeyBorders ? Color.black.opacity(0.18) : Color.clear,
+                        radius: 0,
+                        x: 0,
+                        y: isPressed ? 0.4 : 1.0
+                    )
 
                 // Key label / icon
                 keyLabelView
@@ -37,25 +50,47 @@ struct KeyButtonView: View {
             .simultaneousGesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { value in
+                        if key.action == .space {
+                            // Spacebar cursor scrubbing trackpad gesture
+                            if abs(value.translation.width) > 8 {
+                                viewModel.isSpacebarDragging = true
+                                viewModel.handleSpacebarDragChange(translation: value.translation.width)
+                            }
+                            return
+                        }
+
+                        if key.action == .backspace {
+                            // Backspace slide to delete gesture
+                            viewModel.handleBackspaceSlide(translation: value.translation.width)
+                        }
+
                         if !isPressed {
                             isPressed = true
                             self.globalFrame = frame
 
-                            // Schedule long press detection
+                            // Schedule long press detection for alternate symbols popup
                             let workItem = DispatchWorkItem {
                                 if self.isPressed {
                                     self.viewModel.handleLongPressStart(for: key, in: self.globalFrame)
                                 }
                             }
                             self.longPressWorkItem = workItem
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.32, execute: workItem)
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.30, execute: workItem)
                         } else if viewModel.activePopupKey?.id == key.id {
-                            // Dragging while popup is active
+                            // Dragging across alternate popup
                             let dragOffset = value.translation.width
                             viewModel.handleLongPressDrag(offset: dragOffset, keyWidth: frame.width)
                         }
                     }
                     .onEnded { value in
+                        if key.action == .space {
+                            viewModel.handleSpacebarDragEnd()
+                            if abs(value.translation.width) <= 8 {
+                                viewModel.handleKeyTap(key)
+                            }
+                            return
+                        }
+
                         longPressWorkItem?.cancel()
                         longPressWorkItem = nil
 
@@ -76,56 +111,59 @@ struct KeyButtonView: View {
         switch key.action {
         case .character(let char):
             VStack(spacing: 0) {
-                // Primary character
                 Text(char)
-                    .font(.system(size: 22, weight: .regular, design: .default))
-                    .foregroundColor(.primary)
+                    .font(.system(size: 21, weight: .regular, design: .default))
+                    .foregroundColor(viewModel.currentTheme.keyTextColor)
 
-                // Optional subtle preview of primary alternate symbol on the top corner if present
                 if let firstAlt = key.alternates.first, key.keyType == .standard {
                     Text(firstAlt)
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundColor(.secondary.opacity(0.6))
-                        .offset(y: -2)
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundColor(viewModel.currentTheme.keyTextColor.opacity(0.55))
+                        .offset(y: -1)
                 }
             }
 
         case .shift:
             Image(systemName: key.label)
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(viewModel.shiftState != .off ? Color.accentColor : .primary)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundColor(viewModel.shiftState != .off ? viewModel.currentTheme.accentColor : viewModel.currentTheme.keyTextColor)
 
         case .backspace:
             Image(systemName: "delete.left")
-                .font(.system(size: 18, weight: .regular))
-                .foregroundColor(.primary)
+                .font(.system(size: 17, weight: .regular))
+                .foregroundColor(viewModel.currentTheme.keyTextColor)
 
         case .globe:
             Image(systemName: "globe")
-                .font(.system(size: 18, weight: .regular))
-                .foregroundColor(.primary)
+                .font(.system(size: 17, weight: .regular))
+                .foregroundColor(viewModel.currentTheme.keyTextColor)
 
-        case .clipboardToggle:
-            Image(systemName: "doc.on.clipboard")
-                .font(.system(size: 16, weight: .medium))
-                .foregroundColor(viewModel.isClipboardDrawerOpen ? Color.accentColor : .primary)
+        case .emoji:
+            Image(systemName: "face.smiling")
+                .font(.system(size: 17, weight: .regular))
+                .foregroundColor(viewModel.currentTheme.keyTextColor)
+
+        case .space:
+            Text(viewModel.isSpacebarDragging ? "◄ Scrub Cursor ►" : "English (US)")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(viewModel.currentTheme.keyTextColor.opacity(0.7))
 
         default:
             Text(key.label)
-                .font(.system(size: 15, weight: .medium))
-                .foregroundColor(.primary)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(viewModel.currentTheme.keyTextColor)
         }
     }
 
     private var backgroundColor: Color {
         if isPressed {
-            return Color(UIColor.systemGray3)
+            return viewModel.currentTheme.keyModifierColor
         }
         switch key.keyType {
         case .standard:
-            return Color(UIColor.systemBackground)
+            return viewModel.currentTheme.keyStandardColor
         case .modifier, .action:
-            return Color(UIColor.systemGray5)
+            return viewModel.currentTheme.keyModifierColor
         }
     }
 }

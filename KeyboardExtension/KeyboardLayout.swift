@@ -2,7 +2,7 @@
 //  KeyboardLayout.swift
 //  KeyboardExtension
 //
-//  Defines keyboard structures, key actions, and alternate symbols popup data.
+//  Defines keyboard structures, key actions, alternate symbols popup data, and dedicated number row.
 //
 
 import SwiftUI
@@ -33,6 +33,7 @@ enum KeyAction: Equatable {
     case globe
     case dismiss
     case clipboardToggle
+    case emoji
 }
 
 enum KeyType {
@@ -123,6 +124,21 @@ struct KeyboardLayout {
         "'": ["‘", "’", "`"],
         "%": ["‰"]
     ]
+
+    /// Dedicated Gboard-style top Number Row (1 2 3 4 5 6 7 8 9 0)
+    static func dedicatedNumberRow() -> KeyboardRow {
+        let numbers = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
+        let keys = numbers.map { num in
+            KeyItem(
+                label: num,
+                action: .character(num),
+                alternates: alternateKeyMap[num] ?? [],
+                widthRatio: 1.0,
+                keyType: .standard
+            )
+        }
+        return KeyboardRow(keys: keys)
+    }
 
     static func letterRows(shiftState: ShiftState) -> [KeyboardRow] {
         let isUpper = shiftState.isShifted

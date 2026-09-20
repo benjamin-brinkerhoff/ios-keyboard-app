@@ -1,102 +1,112 @@
-# iOS Keyboard App with Built-in Clipboard & Symbol Popups
+# Gboard-Style iOS Keyboard Application
 
-A custom iOS keyboard extension and companion container app built with **SwiftUI** and **UIKit**.
-
-## Features
-
-- **Long-Press Symbol & Accent Popups**:
-  - Hold down any letter key to display an interactive popup bubble with associated numbers, symbols, and accented characters (e.g. `q` -> `1`, `!`, `e` -> `3`, `é`, `€`, `a` -> `@`, `à`, `s` -> `$`, `ß`).
-  - Slide your finger across the popup to select a character and release to insert.
-  - Subtle preview indicators for primary alternates displayed directly on keys.
-- **Built-in Clipboard & Snippet Manager**:
-  - Horizontal quick-access toolbar directly above the keyboard layout.
-  - View recent clips and one-tap paste directly into the active text field.
-  - Expandable clipboard drawer to browse full history, pin favorite snippets, and clear unpinned clips.
-  - Synchronizes with `UIPasteboard` (requires *Allow Full Access* in iOS Settings).
-  - App Group support (`group.com.ioskeyboard.app`) to share snippets seamlessly between the container app and keyboard extension.
-- **Modern iOS Keyboard Experience**:
-  - QWERTY layout with automatic sentence capitalization.
-  - Numbers and symbol layers (`123`, `#+=`, `ABC`).
-  - Native tactile haptic feedback using `UIImpactFeedbackGenerator` and `UISelectionFeedbackGenerator`.
-  - System key audio clicks conforming to `UIInputViewAudioFeedback`.
-  - Dark Mode and Light Mode dynamic styling adapting automatically to the host application.
-  - Support for the system keyboard switcher (Globe key) when multiple keyboards are active.
+A comprehensive custom iOS keyboard extension and companion application implementing the core feature suite of **Google Gboard (Android)** for iOS, built with **SwiftUI** and **UIKit**.
 
 ---
 
-## Architecture Overview
+## Complete Gboard Feature Suite
 
-The repository is structured into two main components:
+### 1. 🔍 Predictive Text & Auto-Correction Strip
+- **Trie-Based Prefix Engine**: Real-time word completions matching high-frequency English lexicon.
+- **Next-Word Suggestions**: Bigram language model predicting next words based on preceding context (e.g. *how* -> *are*, *is*; *thank* -> *you*, *so*).
+- **One-Tap Suggestion Chips**: Top prediction strip showing 3 candidate completions. Tapping a chip auto-replaces the prefix and appends a space.
+
+### 2. 🔤 Long-Press Symbol & Accent Popups
+- Hold down any letter key to display an interactive popup bubble with associated numbers, symbols, and accented characters (e.g. `q` -> `1`, `!`, `e` -> `3`, `é`, `€`, `a` -> `@`, `à`, `s` -> `$`, `ß`).
+- Slide your finger across the popup to select a character and release to insert.
+- Subtle preview indicators for primary alternates displayed directly on keys.
+
+### 3. 🎯 Spacebar Cursor Trackpad & Gesture Navigation
+- **Spacebar Cursor Scrubbing**: Slide your finger horizontally across the spacebar to glide the cursor through text character-by-character with haptic feedback.
+- **Backspace Slide-to-Delete**: Swipe left from the backspace key to quickly delete full words.
+
+### 4. 🧭 Text Editing Tool (D-Pad Controller)
+- Gboard's signature **Text Editing Navigation Pad**:
+  - Full directional D-Pad: Up, Down, Left, Right arrows with continuous press & single-step cursor positioning.
+  - Quick document jumps: Jump to Start (`|◀`) and Jump to End (`▶|`).
+  - Text actions: Selection mode toggle, Select All, Cut, Copy, and Paste.
+
+### 5. 🔢 Dedicated Number Row
+- Dedicated top row (`1 2 3 4 5 6 7 8 9 0`) positioned above the QWERTY keys.
+- Can be toggled on/off instantly via the toolbar or companion app settings.
+
+### 6. 🖐️ One-Handed Mode
+- Compress the keyboard layout to either the **Left** or **Right** side for easy single-handed typing on larger iPhones.
+- Side control rail provides instant side switching (`<` / `>`) and full-width expand (`⤢`).
+
+### 7. 🎨 Gboard Themes & Key Borders
+- **7 Built-In Themes**:
+  - System Auto (adapts to light/dark mode)
+  - Dark AMOLED (deep black)
+  - Light (clean white)
+  - Dynamic Teal (Material You inspired)
+  - Desert Sand (warm earth tone)
+  - Forest Mint (soft green)
+  - Midnight Lilac (royal purple)
+- **Key Borders Toggle**: Toggle Gboard's signature rectangular key borders on or off.
+
+### 8. 😀 Full Categorized Emoji Keyboard
+- 9 distinct categories: Smileys & Emotion, People, Nature, Food, Activities, Travel, Objects, Symbols, Flags.
+- Category switcher toolbar with instant navigation and quick-return `ABC` button.
+
+### 9. 📋 Integrated Clipboard Manager
+- Horizontal quick-access toolbar directly above the keyboard layout.
+- View recent clips and one-tap paste directly into the active text field.
+- Expandable clipboard drawer to browse full history, pin favorite snippets, and clear unpinned clips.
+- Synchronizes with `UIPasteboard` (requires *Allow Full Access* in iOS Settings).
+- App Group support (`group.com.ioskeyboard.app`) to share snippets seamlessly between the container app and keyboard extension.
+
+---
+
+## iOS Platform Architectural Considerations vs Android
+
+When porting Android Gboard features to iOS, several platform sandbox differences apply:
+
+1. **Microphone & Voice Typing**:
+   - On Android, keyboard apps have direct access to `AudioRecord` and Google Speech Services.
+   - On iOS, Apple's third-party keyboard extension sandbox **strictly blocks direct microphone access** (`AVAudioSession` / `AVAudioEngine` cannot record audio in an extension). Voice dictation on iOS is reserved for Apple's system keyboard, or requires redirecting the user to the container app to record audio.
+2. **Inline Google Translate & Cloud Search**:
+   - Requires network access (`RequestsOpenAccess = true`) and a Google Cloud Translation API key.
+3. **Emoji Kitchen**:
+   - Google's Emoji Kitchen combines two emojis into a customized sticker image served via WebP sticker URLs. This can be integrated by fetching stickers over network when Full Access is granted.
+
+---
+
+## Project Structure
 
 ```
 ios-keyboard-app/
 ├── KeyboardApp/                  # Container App Target
-│   ├── KeyboardApp.swift         # App Entry Point
-│   └── ContentView.swift         # Settings, Instructions & Test Playground
+│   ├── KeyboardApp.swift         # SwiftUI App Entry Point
+│   └── ContentView.swift         # Gboard Settings, Dashboard & Interactive Playground
 │
 ├── KeyboardExtension/            # Custom Keyboard Extension Target
 │   ├── KeyboardViewController.swift # UIInputViewController entry point & system bridge
-│   ├── KeyboardViewModel.swift      # State coordinator, gesture tracking, & haptics
-│   ├── KeyboardLayout.swift         # Rows, character mappings & alternate symbol definitions
-│   ├── KeyboardView.swift           # Root SwiftUI keyboard layout
-│   ├── KeyButtonView.swift          # Key button with tap & long-press gesture recognizers
+│   ├── KeyboardViewModel.swift      # Coordinator for predictions, tools, and gestures
+│   ├── KeyboardLayout.swift         # QWERTY, Number Row, and symbol mappings
+│   ├── KeyButtonView.swift          # Key button with borders, themes & gesture detection
 │   ├── KeyPopupView.swift           # Floating callout bubble for alternate symbols
-│   ├── ClipboardManager.swift       # Pasteboard sync, persistence & snippet pinning
+│   ├── PredictionEngine.swift       # Trie-based dictionary & bigram next-word engine
+│   ├── ToolbarView.swift            # Top Gboard action strip & word suggestion chips
+│   ├── TextEditingPadView.swift     # Gboard Text Editing navigation D-pad tool
+│   ├── EmojiKeyboardView.swift      # 9-category Emoji keyboard
+│   ├── ThemeManager.swift           # 7 Material You themes & Key Borders settings
+│   ├── ThemePickerView.swift        # Inline theme selector drawer
+│   ├── OneHandedMode.swift          # One-handed dock layout and side rails
+│   ├── ClipboardManager.swift       # UIPasteboard sync, persistence & snippet pinning
 │   ├── ClipboardBarView.swift       # Quick paste strip & expandable clipboard drawer
 │   └── Info.plist                   # Extension configuration (RequestsOpenAccess = YES)
 │
 └── .github/workflows/
-    └── build.yml                 # GitHub Actions CI build workflow
+    └── build.yml                 # CI syntax & build verification
 ```
 
 ---
 
-## Xcode Setup & Running
+## Getting Started
 
-### 1. Requirements
-- macOS with **Xcode 15+**
-- iOS 16.0+ deployment target
-
-### 2. Creating the Project Targets in Xcode
-If configuring a fresh `.xcodeproj`:
-1. Create a new iOS App project named `KeyboardApp` using SwiftUI.
-2. In Xcode, go to **File > New > Target...**, choose **Custom Keyboard Extension**, and name it `KeyboardExtension`.
-3. Replace the template files with the files provided in this repository.
-
-### 3. Enabling Full Access for Clipboard
-In `KeyboardExtension/Info.plist`, ensure:
-```xml
-<key>NSExtension</key>
-<dict>
-    <key>NSExtensionAttributes</key>
-    <dict>
-        <key>RequestsOpenAccess</key>
-        <true/>
-    </dict>
-</dict>
-```
-
-### 4. Optional: App Groups for Shared Clipboard
-To share snippets between the container app and the extension:
-1. Select the `KeyboardApp` target -> **Signing & Capabilities** -> **+ Capability** -> **App Groups**.
-2. Add `group.com.ioskeyboard.app`.
-3. Select the `KeyboardExtension` target and enable the exact same App Group identifier.
-
----
-
-## Enabling the Keyboard on Device / Simulator
-
-1. Build and run the `KeyboardApp` scheme on your simulator or connected device.
-2. Open the **Settings** app on iOS.
-3. Navigate to **General > Keyboard > Keyboards > Add New Keyboard...**.
-4. Under *Third-Party Keyboards*, tap **Custom Keyboard**.
-5. Tap **Custom Keyboard** in the list and toggle **Allow Full Access** to **ON** (this grants permission to access `UIPasteboard` for clipboard history).
-6. Open any app with a text field (Messages, Notes, Safari) or the `KeyboardApp` test ground and switch to your custom keyboard using the globe key!
-
----
-
-## Customization
-
-- **Add Custom Key Mappings**: Edit `KeyboardLayout.alternateKeyMap` in `KeyboardLayout.swift` to add or modify symbols revealed when holding any letter.
-- **Adjust Hold Duration**: In `KeyButtonView.swift`, the long-press delay is set to `0.32` seconds by default.
-- **Theming**: Colors in `KeyButtonView.swift` and `KeyboardView.swift` use dynamic `UIColor.systemBackground` and `UIColor.systemGray` values to match iOS native dark/light modes.
+1. Open the project in **Xcode 15+**.
+2. Select your development team under **Signing & Capabilities** for both targets.
+3. Enable the App Group `group.com.ioskeyboard.app` on both targets.
+4. Run the `KeyboardApp` scheme on an iOS 16+ Simulator or connected device.
+5. In iOS **Settings > General > Keyboard > Keyboards**, add **Custom Keyboard** and enable **Allow Full Access**.
