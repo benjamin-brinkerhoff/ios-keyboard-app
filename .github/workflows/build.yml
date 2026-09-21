@@ -69,7 +69,10 @@ jobs:
             fi
           fi
 
-          # Clean any stale or conflicting code signatures to ensure sideloading tools sign cleanly
+          # Ensure Info.plist with NSExtension is copied directly into the appex bundle
+          cp KeyboardExtension/Info.plist build/Payload/KeyboardApp.app/PlugIns/KeyboardExtension.appex/Info.plist
+
+          # Clean any stale or conflicting code signatures
           rm -rf build/Payload/KeyboardApp.app/_CodeSignature
           rm -rf build/Payload/KeyboardApp.app/PlugIns/KeyboardExtension.appex/_CodeSignature
 
