@@ -65,14 +65,16 @@ struct SaveClipIntent: AppIntent {
 @available(iOS 16.0, *)
 struct KeyboardShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
-        AppShortcut(
-            intent: SaveClipIntent(),
-            phrases: [
-                "Save to \(\.applicationName) Clips",
-                "Log clip in \(\.applicationName)"
-            ],
-            shortTitle: "Save Clip",
-            systemImageName: "doc.on.clipboard"
-        )
+        [
+            AppShortcut(
+                intent: SaveClipIntent(),
+                phrases: [
+                    "Save a clipboard clip",
+                    "Log a clipboard clip"
+                ],
+                shortTitle: "Save Clip",
+                systemImageName: "doc.on.clipboard"
+            )
+        ]
     }
 }

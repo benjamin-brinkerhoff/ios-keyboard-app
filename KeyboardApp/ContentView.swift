@@ -184,3 +184,31 @@ struct FeatureRow: View {
         .padding(.vertical, 3)
     }
 }
+
+struct StepRow: View {
+    let number: String
+    let title: String
+    let desc: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text(number)
+                .font(.headline)
+                .foregroundColor(.white)
+                .frame(width: 28, height: 28)
+                .background(Color.accentColor)
+                .clipShape(Circle())
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+
+                Text(desc)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.vertical, 3)
+    }
+}
