@@ -80,11 +80,15 @@ class KeyboardViewController: UIInputViewController {
         view.addSubview(host.view)
         host.didMove(toParent: self)
 
+        let heightConstraint = host.view.heightAnchor.constraint(equalToConstant: 290)
+        heightConstraint.priority = UILayoutPriority(999)
+
         NSLayoutConstraint.activate([
             host.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             host.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             host.view.topAnchor.constraint(equalTo: view.topAnchor),
-            host.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            host.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            heightConstraint
         ])
 
         self.hostingController = host
