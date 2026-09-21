@@ -15,8 +15,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Select Xcode 15.4
-        run: sudo xcode-select -switch /Applications/Xcode_15.4.app
+      - name: Select Xcode 16
+        run: |
+          XCODE_PATH=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -n 1)
+          if [ -z "$XCODE_PATH" ]; then
+            echo "Xcode 16 not found via wildcard, listing all available Xcode installations:"
+            ls -d /Applications/Xcode*.app
+            XCODE_PATH=$(ls -d /Applications/Xcode*.app | sort -V | tail -n 1)
+          fi
+          echo "Selected Xcode: $XCODE_PATH"
+          sudo xcode-select --switch "$XCODE_PATH"
+
+      - name: Verify Xcode Version
+        run: xcodebuild -version
 
       - name: Install XcodeGen
         run: brew install xcodegen
