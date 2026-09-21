@@ -22,6 +22,15 @@ class KeyboardViewModel: ObservableObject {
     @Published var currentTheme: GboardTheme = .system
     @Published var showKeyBorders: Bool = true
 
+    var isClipboardDrawerOpen: Bool {
+        get {
+            activeTool == .clipboard
+        }
+        set {
+            activeTool = newValue ? .clipboard : .none
+        }
+    }
+
     // Predictive text & Suggestions
     @Published var currentPredictions: [String] = ["I", "The", "Thanks"]
     @Published var currentWordPrefix: String = ""
