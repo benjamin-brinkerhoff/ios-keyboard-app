@@ -69,8 +69,20 @@ jobs:
             fi
           fi
 
-          # Ensure Info.plist with NSExtension is copied directly into the appex bundle
-          cp KeyboardExtension/Info.plist build/Payload/KeyboardApp.app/PlugIns/KeyboardExtension.appex/Info.plist
+          # Force copy explicit Info.plist files to guarantee no unexpanded build variables
+          chmod -R u+w build/Payload/KeyboardApp.app
+          cp -f KeyboardApp/Info.plist build/Payload/KeyboardApp.app/Info.plist
+          cp -f KeyboardExtension/Info.plist build/Payload/KeyboardApp.app/PlugIns/KeyboardExtension.appex/Info.plist
+
+          # Convert plists to standard binary plist format required by iOS installd & Feather
+          plutil -convert binary1 build/Payload/KeyboardApp.app/Info.plist
+          plutil -convert binary1 build/Payload/KeyboardApp.app/PlugIns/KeyboardExtension.appex/Info.plist
+
+          # Verify keys
+          echo "=== Verified KeyboardApp Info.plist ==="
+          plutil -p build/Payload/KeyboardApp.app/Info.plist | grep -E "CFBundleExecutable|CFBundleIdentifier"
+          echo "=== Verified KeyboardExtension Info.plist ==="
+          plutil -p build/Payload/KeyboardApp.app/PlugIns/KeyboardExtension.appex/Info.plist | grep -E "CFBundleExecutable|CFBundleIdentifier|NSExtensionPointIdentifier"
 
           # Clean any stale or conflicting code signatures
           rm -rf build/Payload/KeyboardApp.app/_CodeSignature
