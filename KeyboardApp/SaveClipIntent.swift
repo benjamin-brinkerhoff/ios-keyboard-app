@@ -70,8 +70,8 @@ struct KeyboardShortcuts: AppShortcutsProvider {
         AppShortcut(
             intent: SaveClipIntent(),
             phrases: [
-                "Save to \(\.applicationName) Clips",
-                "Log clip in \(\.applicationName)"
+                "Save to \(.applicationName) Clips",
+                "Log clip in \(.applicationName)"
             ],
             shortTitle: "Save Clip",
             systemImageName: "doc.on.clipboard"
