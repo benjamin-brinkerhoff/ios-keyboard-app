@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 enum GboardTool: Equatable {
     case none

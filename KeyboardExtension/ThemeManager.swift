@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 enum GboardTheme: String, CaseIterable, Identifiable {
     case system = "System Auto"

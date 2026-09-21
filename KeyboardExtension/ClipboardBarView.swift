@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct ClipboardBarView: View {
     @ObservedObject var viewModel: KeyboardViewModel

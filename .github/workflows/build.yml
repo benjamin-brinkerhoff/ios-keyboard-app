@@ -58,6 +58,24 @@ jobs:
           fi
           echo "Found built application at: $APP_PATH"
           cp -r "$APP_PATH" build/Payload/
+
+          # Ensure KeyboardExtension.appex is inside PlugIns
+          EXT_PATH=$(find derivedData/Build/Products/Release-iphoneos -name "KeyboardExtension.appex" -type d | head -n 1)
+          if [ -n "$EXT_PATH" ]; then
+            mkdir -p build/Payload/KeyboardApp.app/PlugIns
+            if [ ! -d "build/Payload/KeyboardApp.app/PlugIns/KeyboardExtension.appex" ]; then
+              echo "Embedding KeyboardExtension.appex into PlugIns..."
+              cp -r "$EXT_PATH" build/Payload/KeyboardApp.app/PlugIns/
+            fi
+          fi
+
+          # Ad-hoc codesign binary and extension for sideloading compatibility
+          echo "Applying ad-hoc code signature..."
+          if [ -d "build/Payload/KeyboardApp.app/PlugIns/KeyboardExtension.appex" ]; then
+            codesign --force --deep --sign - --entitlements KeyboardExtension/KeyboardExtension.entitlements build/Payload/KeyboardApp.app/PlugIns/KeyboardExtension.appex 2>/dev/null || true
+          fi
+          codesign --force --deep --sign - --entitlements KeyboardApp/KeyboardApp.entitlements build/Payload/KeyboardApp.app 2>/dev/null || true
+
           cd build
           zip -r -y KeyboardApp-unsigned.ipa Payload
           echo "Successfully packaged KeyboardApp-unsigned.ipa:"

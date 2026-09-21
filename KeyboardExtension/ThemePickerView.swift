@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct ThemePickerView: View {
     @ObservedObject var viewModel: KeyboardViewModel

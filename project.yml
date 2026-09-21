@@ -23,6 +23,8 @@ targets:
       - path: Shared
     info:
       path: KeyboardApp/Info.plist
+    entitlements:
+      path: KeyboardApp/KeyboardApp.entitlements
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ioskeyboard.app
@@ -32,6 +34,7 @@ targets:
         ENABLE_BITCODE: NO
     dependencies:
       - target: KeyboardExtension
+        embed: true
 
   KeyboardExtension:
     type: app-extension
@@ -41,6 +44,8 @@ targets:
       - path: Shared
     info:
       path: KeyboardExtension/Info.plist
+    entitlements:
+      path: KeyboardExtension/KeyboardExtension.entitlements
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ioskeyboard.app.keyboard

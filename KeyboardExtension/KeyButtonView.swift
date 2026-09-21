@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct KeyButtonView: View {
     @ObservedObject var viewModel: KeyboardViewModel

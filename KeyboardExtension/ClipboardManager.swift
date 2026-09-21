@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import SwiftUI
 import Combine
 
 class ClipboardManager: ObservableObject {
@@ -67,10 +68,12 @@ class ClipboardManager: ObservableObject {
         let newItem = ClipboardItem(text: currentString)
         history.insert(newItem, at: 0)
 
+        // Defensive history trimming (avoid negative prefix)
         if history.count > maxHistoryItems {
             let pinned = history.filter { $0.isPinned }
             let unpinned = history.filter { !$0.isPinned }
-            let keptUnpinned = unpinned.prefix(maxHistoryItems - pinned.count)
+            let availableSlots = max(0, maxHistoryItems - pinned.count)
+            let keptUnpinned = unpinned.prefix(availableSlots)
             history = pinned + Array(keptUnpinned)
             history.sort { (a, b) -> Bool in
                 if a.isPinned != b.isPinned {

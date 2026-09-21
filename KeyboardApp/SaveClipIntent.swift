@@ -8,6 +8,7 @@
 
 import AppIntents
 import UIKit
+import Foundation
 
 @available(iOS 16.0, *)
 struct SaveClipIntent: AppIntent {
@@ -45,11 +46,12 @@ struct SaveClipIntent: AppIntent {
             let newItem = ClipboardItem(text: contentToSave)
             history.insert(newItem, at: 0)
 
-            // Keep within limit
+            // Defensive history trimming (avoid negative prefix)
             if history.count > 30 {
                 let pinned = history.filter { $0.isPinned }
                 let unpinned = history.filter { !$0.isPinned }
-                let kept = Array(unpinned.prefix(30 - pinned.count))
+                let availableSlots = max(0, 30 - pinned.count)
+                let kept = Array(unpinned.prefix(availableSlots))
                 history = pinned + kept
             }
 
@@ -68,8 +70,8 @@ struct KeyboardShortcuts: AppShortcutsProvider {
         AppShortcut(
             intent: SaveClipIntent(),
             phrases: [
-                "Save a clipboard clip",
-                "Log a clipboard clip"
+                "Save to \(\.applicationName) Clips",
+                "Log clip in \(\.applicationName)"
             ],
             shortTitle: "Save Clip",
             systemImageName: "doc.on.clipboard"

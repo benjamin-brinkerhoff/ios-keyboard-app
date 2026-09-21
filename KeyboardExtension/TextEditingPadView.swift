@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct TextEditingPadView: View {
     @ObservedObject var viewModel: KeyboardViewModel
