@@ -69,12 +69,9 @@ jobs:
             fi
           fi
 
-          # Ad-hoc codesign binary and extension for sideloading compatibility
-          echo "Applying ad-hoc code signature..."
-          if [ -d "build/Payload/KeyboardApp.app/PlugIns/KeyboardExtension.appex" ]; then
-            codesign --force --deep --sign - --entitlements KeyboardExtension/KeyboardExtension.entitlements build/Payload/KeyboardApp.app/PlugIns/KeyboardExtension.appex 2>/dev/null || true
-          fi
-          codesign --force --deep --sign - --entitlements KeyboardApp/KeyboardApp.entitlements build/Payload/KeyboardApp.app 2>/dev/null || true
+          # Clean any stale or conflicting code signatures to ensure sideloading tools sign cleanly
+          rm -rf build/Payload/KeyboardApp.app/_CodeSignature
+          rm -rf build/Payload/KeyboardApp.app/PlugIns/KeyboardExtension.appex/_CodeSignature
 
           cd build
           zip -r -y KeyboardApp-unsigned.ipa Payload
